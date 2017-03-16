@@ -41,9 +41,10 @@ function proxy_set_resolver {
 }
 
 function proxy_copy_resolv.conf {
-	# Configure the proxy's resolv.conf with a local one
+	# Configure the proxy's resolv.conf with Google's 8.8.8.8
+	# The host's resolv.conf won't work if it uses dnsmasq
 	# $1  := resolv.conf path
-	proxy_set_resolver $(sed -n 's/nameserver \(.*\)/\1/p' /etc/resolv.conf | head -1)
+	proxy_set_resolver 8.8.8.8
 	# notify squid that the resolv.conf has changed
 	proxy_send "squid -k reconfigure"
 }
@@ -218,7 +219,7 @@ function host_detect_iface_filter {
 	if host_is_darwin; then
 		ifconfig -l | grep -Go ${1} | tr "\n" " "
 	else
-		ifconfig -s -a | grep -Go ${1} | tr "\n" " "
+		ifconfig -s -a | grep -E ${1} | cut -f 1 -d ' ' | tr "\n" " "
 	fi
 }
 
@@ -227,7 +228,8 @@ function host_detect_iface {
 	if host_is_darwin; then
 		host_detect_iface_filter "en[0-9]"
 	else
-		host_detect_iface_filter "eth[0-9]"
+		# Support systemd/udev 'predictable interface names' including wireless
+		host_detect_iface_filter "eth|en|wl" 
 	fi
 }
 
